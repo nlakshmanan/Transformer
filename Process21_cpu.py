@@ -14,25 +14,13 @@ def read_data(opt):
         except:
             print("error: '" + opt.src_data + "' file not found")
             quit()
+    
     if opt.trg_data is not None:
         try:
             opt.trg_data = open(opt.trg_data).read().strip().split('\n')
         except:
             print("error: '" + opt.trg_data + "' file not found")
             quit()
-    if opt.trg_datav is not None:
-        try:
-            opt.trg_datav = open(opt.trg_datav).read().strip().split('\n')
-        except:
-            print("error: '" + opt.trg_datav + "' file not found")
-            quit()
-    if opt.src_datav is not None:
-        try:
-            opt.src_datav = open(opt.src_datav).read().strip().split('\n')
-        except:
-            print("error: '" + opt.src_datav + "' file not found")
-            quit()
-
 
 def create_fields(opt):
     
@@ -48,6 +36,7 @@ def create_fields(opt):
 
     TRG = data.Field(lower=True, tokenize=t_trg.tokenizer)
     SRC = data.Field(lower=True, tokenize=t_src.tokenizer,init_token = '<sos>',eos_token = '<eos>')
+    #TRG = data.Field(sequential=False, use_vocab=False)
 
     if opt.load_weights is not None:
         try:
@@ -65,54 +54,18 @@ def create_dataset(opt, SRC, TRG):
 
     print("creating dataset and iterator... ")
 
-    raw_data = {'src' : [line for line in opt.src_datav], 'trg': [line for line in opt.trg_datav]}
-    aw_data['src'] = raw_data['src'][:100]
-    raw_data['trg'] = raw_data['trg'][:100]
+    raw_data = {'src' : [line for line in opt.src_data], 'trg': [line for line in opt.trg_data]}
     print(len(raw_data['src']))
     print(len(raw_data['trg']))
     df = pd.DataFrame(raw_data, columns=["src", "trg"])
-    df.to_csv("data1.csv", index=False)
+    # mask = (df['src'].str.count(' ') < opt.max_strlen)
+    # df = df.loc[mask]#提取出来小于最大长度的句子
+    df.to_csv("data.csv", index=False)
     data_fields = [('src', SRC), (str('trg'), TRG)]
-    train = data.TabularDataset('./data1.csv', format='csv', fields=data_fields)
+    train = data.TabularDataset('./data.csv', format='csv', fields=data_fields)
     train_iter = MyIterator(train, batch_size=opt.batchsize,
                             repeat=False, sort_key=lambda x: (len(x.src), len(x.trg)), batch_size_fn= batch_size_fn, train=True, shuffle=False)
-    os.remove('data1.csv')
-
-    if opt.load_weights is None:
-        SRC.build_vocab(train)
-        TRG.build_vocab(train)
-        if opt.checkpoint > 0:
-            try:
-                os.mkdir("weights")
-            except:
-                print("weights folder already exists, run program with -load_weights weights to load them")
-                quit()
-            pickle.dump(SRC, open('weights/SRC.pkl', 'wb'))
-            pickle.dump(TRG, open('weights/TRG.pkl', 'wb'))
-
-
-    opt.src_pad = SRC.vocab.stoi['<pad>']
-    opt.trg_pad = TRG.vocab.stoi['<pad>']
-
-
-    opt.train_len = get_len(train_iter)
-
-    return train_iter
-
-def create_dataset1(opt, SRC, TRG):
-
-    print("creating dataset and iterator... ")
-
-    raw_data = {'src' : [line for line in opt.src_datav], 'trg': [line for line in opt.trg_datav]}
-    raw_data['src'] = raw_data['src'][10000:15000]
-    raw_data['trg'] = raw_data['trg'][10000:15000]
-    df = pd.DataFrame(raw_data, columns=["src", "trg"])
-    df.to_csv("data1.csv", index=False)
-    data_fields = [('src', SRC), (str('trg'), TRG)]
-    train = data.TabularDataset('./data1.csv', format='csv', fields=data_fields)
-    train_iter = MyIterator(train, batch_size=opt.batchsize,
-                            repeat=False, sort_key=lambda x: (len(x.src), len(x.trg)), batch_size_fn= batch_size_fn, train=True, shuffle=False)
-    os.remove('data1.csv')
+    os.remove('data.csv')
 
     if opt.load_weights is None:
         SRC.build_vocab(train)
@@ -139,5 +92,5 @@ def get_len(train):
 
     for i, b in enumerate(train):
         pass
-
+    
     return i

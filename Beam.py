@@ -11,8 +11,8 @@ def init_vars(src, model, SRC, TRG, opt):
     e_output = model.encoder(src, src_mask)
     
     outputs = torch.LongTensor([[init_tok]])
-    if opt.device == 0:
-        outputs = outputs.cuda()
+    #if opt.device == 0:
+    #    outputs = outputs.cuda()
     
     trg_mask = nopeak_mask(1, opt)
     
@@ -24,8 +24,8 @@ def init_vars(src, model, SRC, TRG, opt):
     log_scores = torch.Tensor([math.log(prob) for prob in probs.data[0]]).unsqueeze(0)
     
     outputs = torch.zeros(opt.k, opt.max_len).long()
-    if opt.device == 0:
-        outputs = outputs.cuda()
+    #if opt.device == 0:
+    #    outputs = outputs.cuda()
     outputs[:, 0] = init_tok
     outputs[:, 1] = ix[0]
     
