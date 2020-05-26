@@ -24,14 +24,14 @@ criterion=F.nll_loss
 
 global src_mask,src,trg_input,trg_mask
 def train_model(model, opt, SRC, TRG):
-    name = '128_L' + str(opt.n_layers)+str(opt.aaa)
+    name = '/content/drive/My Drive/CS397SeqAdapative/128_L' + str(opt.n_layers)+str(opt.aaa)
     savep = 5
     print("training model...")
     model.train()
     #Initialize the test epoch
     doc_epoch = 50
     test_epoch= doc_epoch
-    dst="new"+name
+    dst=name
     dst1=dst+"1"
     losstext = "losstext.csv"
     #dst1=name + str(test_epoch)+'_c_'+str(epoch+opt.restart)
@@ -59,7 +59,7 @@ def train_model(model, opt, SRC, TRG):
             opt.optimizer.step()
             loss1 = loss
             loss1 = loss.detach().cpu().numpy()
-            print("current_loss:",loss1)
+            #print("current_loss:",loss1)
             if opt.SGDR == True:
                 opt.sched.step()
             loss_value = loss_value + loss1
@@ -136,7 +136,7 @@ def eval(model,opt,SRC,TRG,epoch,name,best_epoch,best_val):
         plt.figure()
         plt.plot(f1)
         plt.savefig(name + "validation.png")
-        valtext=name+"validation"
+        valtext=name+"validation.txt"
         np.savetxt(valtext,f1)
         return best_epoch,best_val
 
@@ -153,7 +153,7 @@ def main():
     parser.add_argument('-n_layers', type=int, required=True)
     parser.add_argument('-restart', type=int, required=True)
     parser.add_argument('-bestval', type=float, required=True)
-    parser.add_argument('-heads', type=int, default=4)
+    parser.add_argument('-heads', type=int, default=8)
     parser.add_argument('-dropout', type=int, default=0.1)
     parser.add_argument('-batchsize', type=int, required=True)
     parser.add_argument('-printevery', type=int, default=100)

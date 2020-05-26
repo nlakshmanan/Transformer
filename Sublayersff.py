@@ -40,7 +40,18 @@ class MultiHeadAttention(nn.Module):
     def forward(self, q, k, v, mask=None, dropout=None):
 
         bs = q.size(0)
-        #print("bs:",bs)
+
+        if q.size(1)>150:
+            self.h=8
+            self.d_k = self.d_model // self.h
+        elif q.size(1)<=100 and q.size(1)>75:
+            self.h=4
+            self.d_k = self.d_model // self.h
+        elif q.size(1)<=75 and q.size(1)>0:
+            self.h=2
+            self.d_k = self.d_model // self.h
+
+        # print("bs:",bs)
         # perform q,k,v product operation and split into N heads
         k= torch.matmul(k,self.k_linear1)
         k= k.view(bs, -1, self.h, self.d_k)

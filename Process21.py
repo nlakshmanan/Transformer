@@ -66,8 +66,8 @@ def create_dataset(opt, SRC, TRG):
     print("creating dataset and iterator... ")
 
     raw_data = {'src' : [line for line in opt.src_datav], 'trg': [line for line in opt.trg_datav]}
-    aw_data['src'] = raw_data['src'][:100]
-    raw_data['trg'] = raw_data['trg'][:100]
+    #raw_data['src'] = raw_data['src'][:5000]
+    #raw_data['trg'] = raw_data['trg'][:5000]
     print(len(raw_data['src']))
     print(len(raw_data['trg']))
     df = pd.DataFrame(raw_data, columns=["src", "trg"])
@@ -111,7 +111,7 @@ def create_dataset1(opt, SRC, TRG):
     data_fields = [('src', SRC), (str('trg'), TRG)]
     train = data.TabularDataset('./data1.csv', format='csv', fields=data_fields)
     train_iter = MyIterator(train, batch_size=opt.batchsize,
-                            repeat=False, sort_key=lambda x: (len(x.src), len(x.trg)), batch_size_fn= batch_size_fn, train=True, shuffle=False)
+                            repeat=False, sort_key=lambda x: (len(x.src), len(x.trg)), batch_size_fn= batch_size_fn, train=True, shuffle=True)
     os.remove('data1.csv')
 
     if opt.load_weights is None:
