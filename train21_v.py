@@ -24,7 +24,7 @@ criterion=F.nll_loss
 
 global src_mask,src,trg_input,trg_mask
 def train_model(model, opt, SRC, TRG):
-    name = '/content/drive/My Drive/CS397SeqAdapative/128_L' + str(opt.n_layers)+str(opt.aaa)
+    name = '128_L' + str(opt.n_layers)+str(opt.aaa)
     savep = 5
     print("training model...")
     model.train()

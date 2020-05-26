@@ -41,13 +41,13 @@ class MultiHeadAttention(nn.Module):
 
         bs = q.size(0)
 
-        if q.size(1)>150:
+        if q.size(1)>200:
             self.h=8
             self.d_k = self.d_model // self.h
-        elif q.size(1)<=100 and q.size(1)>75:
+        elif q.size(1)<=110 and q.size(1)>200:
             self.h=4
             self.d_k = self.d_model // self.h
-        elif q.size(1)<=75 and q.size(1)>0:
+        elif q.size(1)<=110 and q.size(1)>0:
             self.h=2
             self.d_k = self.d_model // self.h
 
