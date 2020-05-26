@@ -1,102 +1,100 @@
 import argparse
 import time
 import torch
-from Models import get_model
-from Process import *
+from Models211 import get_model
+from Process21_cpu import *
 import torch.nn.functional as F
 from Optim import CosineWithRestarts
-from Batch import create_masks
-import pdb
+from Batch21 import create_masks
 import dill as pickle
-import argparse
-from Models import get_model
-from Beam import beam_search
-from nltk.corpus import wordnet
-from torch.autograd import Variable
-import re
+import torch
+import torch.nn as nn
+import numpy as np
+import random
+import torch.optim as optimmatplotlib
+from sklearn.metrics import f1_score
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
-def get_synonym(word, SRC):
-    syns = wordnet.synsets(word)
-    for s in syns:
-        for l in s.lemmas():
-            if SRC.vocab.stoi[l.name()] != 0:
-                return SRC.vocab.stoi[l.name()]
-            
-    return 0
+def train_model(model, opt):
+    prediction = torch.zeros((1, 2)).float()
+    label = torch.tensor(5).long()
+    label = label.view(-1, 1)
+    print("training model...")
+    model.train()
+    for i, batch in enumerate(opt.train):
+        src = batch.src.transpose(0,1)
+        trg = batch.trg.transpose(0,1)
+        trg_input = trg[:, :-1]
+        src_mask, trg_mask = create_masks(src, trg_input, opt)
+        preds,ys = model(src, trg_input, src_mask, trg_mask)
+        ys=ys.view(-1,1)
+        prediction=torch.cat((prediction,preds),dim=0)
+        label=torch.cat((label,ys),dim=0)
+        print(i)
+    prediction=prediction[1:,:]
+    label=label[1:,:]
+    print(prediction.size(),label.size())
+    prediction = prediction.detach().numpy()
+    label = label.detach().numpy()
+    prediction=np.argmax(prediction, axis=1)
+    prediction=prediction.reshape(-1,1)
+    F_measure1 = f1_score(label, prediction, average='weighted')
+    print("f1_score:",F_measure1)
 
-def multiple_replace(dict, text):
-  # Create a regular expression  from the dictionary keys
-  regex = re.compile("(%s)" % "|".join(map(re.escape, dict.keys())))
-
-  # For each match, look-up corresponding value in dictionary
-  return regex.sub(lambda mo: dict[mo.string[mo.start():mo.end()]], text) 
-
-def translate_sentence(sentence, model, opt, SRC, TRG):
-    
-    model.eval()
-    indexed = []
-    sentence = SRC.preprocess(sentence)
-    for tok in sentence:
-        if SRC.vocab.stoi[tok] != 0 or opt.floyd == True:
-            indexed.append(SRC.vocab.stoi[tok])
-        else:
-            indexed.append(get_synonym(tok, SRC))
-    sentence = Variable(torch.LongTensor([indexed]))
-    if opt.device == 0:
-        sentence = sentence.cuda()
-    
-    sentence = beam_search(sentence, model, SRC, TRG, opt)
-
-    return  multiple_replace({' ?' : '?',' !':'!',' .':'.','\' ':'\'',' ,':','}, sentence)
-
-def translate(opt, model, SRC, TRG):
-    sentences = opt.text.lower().split('.')
-    translated = []
-
-    for sentence in sentences:
-        translated.append(translate_sentence(sentence + '.', model, opt, SRC, TRG).capitalize())
-
-    return (' '.join(translated))
 
 
 def main():
-    
     parser = argparse.ArgumentParser()
+    parser.add_argument('-src_data', required=True)
+    parser.add_argument('-trg_data', required=True)
     parser.add_argument('-load_weights', required=True)
     parser.add_argument('-k', type=int, default=3)
     parser.add_argument('-max_len', type=int, default=80)
     parser.add_argument('-d_model', type=int, default=512)
-    parser.add_argument('-n_layers', type=int, default=6)
+    parser.add_argument('-n_layers', type=int, default=4)
     parser.add_argument('-src_lang', required=True)
     parser.add_argument('-trg_lang', required=True)
-    parser.add_argument('-heads', type=int, default=8)
+    parser.add_argument('-heads', type=int, default=4)
     parser.add_argument('-dropout', type=int, default=0.1)
     parser.add_argument('-no_cuda', action='store_true')
     parser.add_argument('-floyd', action='store_true')
-    
+    parser.add_argument('-max_strlen', type=int, default=80)
+    parser.add_argument('-batchsize', type=int, default=8000)
+    parser.add_argument('-printevery', type=int, default=100)
+    parser.add_argument('-create_valset', action='store_true')
+    parser.add_argument('-checkpoint', type=int, default=0)
+    parser.add_argument('-SGDR', action='store_true')
     opt = parser.parse_args()
 
-    opt.device = 0 if opt.no_cuda is False else -1
- 
-    assert opt.k > 0
-    assert opt.max_len > 10
+    #opt.device = 0 if opt.no_cuda is False else -1
+    #if opt.device == 0:
+    #    assert torch.cuda.is_available()
 
-    SRC, TRG = create_fields(opt)
+    read_data(opt)
+    SRC, TRG= create_fields(opt)
+    opt.train = create_dataset(opt, SRC, TRG)
     model = get_model(opt, len(SRC.vocab), len(TRG.vocab))
+    #if opt.load_weights is not None and opt.floyd is not None:
+        #os.mkdir('weights')
+        #pickle.dump(SRC, open('weights/SRC.pkl', 'wb'))
+        #pickle.dump(TRG, open('weights/TRG.pkl', 'wb'))
     
-    while True:
-        opt.text =input("Enter a sentence to translate (type 'f' to load from file, or 'q' to quit):\n")
-        if opt.text=="q":
-            break
-        if opt.text=='f':
-            fpath =input("Enter a sentence to translate (type 'f' to load from file, or 'q' to quit):\n")
-            try:
-                opt.text = ' '.join(open(opt.text, encoding='utf-8').read().split('\n'))
-            except:
-                print("error opening or reading text file")
-                continue
-        phrase = translate(opt, model, SRC, TRG)
-        print('> '+ phrase + '\n')
+    train_model(model, opt)
+    if opt.floyd is False:
+        promptNextAction(model, opt, SRC, TRG)
 
-if __name__ == '__main__':
+
+def promptNextAction(model, opt, SRC, TRG):
+
+    saved_once = 1 if opt.load_weights is not None or opt.checkpoint > 0 else 0
+    
+    if opt.load_weights is not None:
+        dst = opt.load_weights
+    if opt.checkpoint > 0:
+        dst = 'weights'
+
+
+if __name__ == "__main__":
     main()
