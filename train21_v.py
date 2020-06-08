@@ -14,7 +14,7 @@ import torch.nn as nn
 import numpy as np
 import random
 import torch.optim as optim
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score,accuracy_score
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -124,9 +124,9 @@ def eval(model,opt,SRC,TRG,epoch,name,best_epoch,best_val):
         labellll = labellll.detach().cpu().numpy()
         validation = np.argmax(validation, axis=1)
         validation = validation.reshape(-1, 1)
-        
-        accuracy = accuracy_score(labellll, validation, *, normalize=True)
+        accuracy = accuracy_score(labellll, validation,normalize=True)
         print("accuracy:", accuracy)
+        
         
         F_1 = f1_score(labellll, validation, average='binary')
         if F_1> best_val:
