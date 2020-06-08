@@ -126,6 +126,8 @@ def eval(model,opt,SRC,TRG,epoch,name,best_epoch,best_val):
         validation = validation.reshape(-1, 1)
         accuracy = accuracy_score(labellll, validation,normalize=True)
         print("accuracy:", accuracy)
+        
+        
         F_1 = f1_score(labellll, validation, average='binary')
         if F_1> best_val:
             best_val = F_1
